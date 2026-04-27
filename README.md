@@ -382,7 +382,7 @@ Never write `if (req.user.role === 'admin')` inline. Always go through
 
 ## Credits & Tools Used
 
-**This lab was created by:** [@AlphaDevelopmental]([https://github.com/AlphaDevelopmental](https://github.com/AlphaDevelopmental/))
+**This lab was created by:** [@AlphaDevelopmental](https://github.com/AlphaDevelopmental/)
 
 ### Tools & Technologies
 
