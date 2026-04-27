@@ -10,6 +10,8 @@
     "test:01": "jest exercises/01-idor --runInBand --forceExit --verbose",
     "test:02": "jest exercises/02-escalation --runInBand --forceExit --verbose",
     "test:03": "jest exercises/03-jwt-abuse --runInBand --forceExit --verbose",
+    "test:04": "jest exercises/04-context-bypass --runInBand --forceExit --verbose",
+    "test:05": "jest exercises/05-multitenant --runInBand --forceExit --verbose",
     "test:watch": "jest --watch --runInBand"
   },
   "keywords": ["security", "ctf", "owasp", "access-control", "education"],

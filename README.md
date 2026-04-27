@@ -1,6 +1,8 @@
 # 🔐 Broken Access Control Lab
 ### A CTF-style pentesting lab for OWASP A01:2021
 
+**Keywords:** security, penetration testing, OWASP, access control, IDOR, JWT, privilege escalation, authentication, authorization, CTF, Express.js, Node.js, curl, jq, hands-on learning
+
 > **Target audience:** Security students who know Express/Node and want hands-on  
 > experience finding and fixing real access control vulnerabilities.
 
@@ -35,9 +37,20 @@ permissions map, and access control middleware. But 8 bugs are hiding in the cod
 
 ---
 
-## Setup
+## Setup & Prerequisites
 
-**Prerequisites:** Node.js 18+, npm
+### Required Tools
+
+| Tool | Version | Used For |
+|------|---------|----------|
+| **Node.js** | 18+ | Running the server & tests |
+| **npm** | Latest | Package management |
+| **curl** | Any | Making HTTP requests, exploiting vulnerabilities |
+| **jq** | Any | Parsing JSON responses |
+| **bash/zsh** | Any | Shell scripting for exploits |
+| **Text Editor** | Any | Reading & fixing code |
+
+### Installation
 
 ```bash
 # Clone the repo
@@ -58,7 +71,28 @@ npm test
 npm run test:01
 npm run test:02
 npm run test:03
+npm run test:04
+npm run test:05
 ```
+
+### Tools Installation (if needed)
+
+**macOS:**
+```bash
+brew install curl jq
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install curl jq
+```
+
+**Windows (WSL2):**
+```bash
+apt-get install curl jq
+```
+
+Most systems have `curl` and basic shells pre-installed. `jq` is the only tool you might need to install explicitly.
 
 ---
 
@@ -88,6 +122,46 @@ in the JWT payload — that's also one of the things you'll attack in Exercise 0
 
 ---
 
+## Typical Workflow
+
+Here's how you'll use these tools for each exercise:
+
+```bash
+# Terminal 1: Start the server
+npm start
+
+# Terminal 2: Get a JWT token (curl + jq)
+TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"password123"}' | jq -r .token)
+
+# Terminal 2: Exploit the vulnerability (curl + jq)
+curl -s http://localhost:3000/api/expenses/4 \
+  -H "Authorization: Bearer $TOKEN" | jq .
+
+# Terminal 2: Decode JWT payload (node)
+node -e "
+  const parts = '$TOKEN'.split('.');
+  console.log(JSON.parse(Buffer.from(parts[1], 'base64url').toString()));
+"
+
+# Terminal 2 or Editor: Fix the code
+vim src/app.js
+# or: code src/app.js
+
+# Terminal 2: Verify your fix
+npm run test:01
+```
+
+**Key tools in action:**
+- **curl** — sends HTTP requests to the API
+- **jq** — parses JSON responses and extracts specific fields
+- **node** — crafts and decodes JWT tokens
+- **npm** — runs server and tests
+- **Editor** — read and fix vulnerable code
+
+---
+
 ## The Vulnerability Map
 
 The lab contains **8 intentional vulnerabilities** across 3 exercises.
@@ -106,6 +180,12 @@ The lab contains **8 intentional vulnerabilities** across 3 exercises.
 | 6 | Vertical | `POST /api/expenses/approve/:id` | Manual role check blocks legitimate managers | `BAC{manual_role_check_bypasses_permission_system}` |
 | 7 | JWT | `verifyToken()` in `auth.js` | `alg:none` tokens accepted (no algorithm whitelist) | `BAC{jwt_alg_none_accepted}` |
 | 8 | JWT | `JWT_SECRET` in `auth.js` | Hardcoded weak secret (`"secret"`) | `BAC{jwt_weak_secret_cracked}` |
+| 9 | Attribute-Based | `GET /api/expenses/search` | No ownership filter on search results | `BAC{search_no_ownership_filter}` |
+| 10 | Batch Operation | `POST /api/expenses/bulk-update` | No per-item ownership checks | `BAC{bulk_update_no_item_checks}` |
+| 11 | Batch Operation | `DELETE /api/expenses/category/:cat` | No per-item ownership checks | `BAC{bulk_delete_no_item_checks}` |
+| 12 | Multi-Tenant | `GET /api/expenses` | Org context from header, not re-validated | `BAC{cross_org_no_context_validation}` |
+| 13 | Multi-Tenant | `POST /api/org/setup` | First user auto-promoted, no re-validation | `BAC{org_setup_no_admin_validation}` |
+| 14 | Multi-Tenant | `POST /api/org/invite` | No authorization check on invite | `BAC{org_invite_no_authorization}` |
 
 </details>
 
@@ -164,9 +244,31 @@ npm run test:03
 
 ---
 
+### [Exercise 04 — Context/Attribute-Based Bypass](./exercises/04-context-bypass/challenge.md) ⭐ Advanced
+Batch operations and search functions skip per-item authorization checks.
+Find three routes that process multiple items but only validate permission once.
+Exploit search filtering, bulk updates, and bulk deletes to access/modify other users' data.
+
+```bash
+npm run test:04
+```
+
+---
+
+### [Exercise 05 — Multi-Tenant Isolation](./exercises/05-multitenant/challenge.md) ⭐ Expert
+The app now supports multiple organizations. Exploit three multi-tenant vulnerabilities:
+org context manipulation, first-user admin escalation, and unvalidated org invites.
+Learn why user-controlled context is dangerous and how to properly validate it.
+
+```bash
+npm run test:05
+```
+
+---
+
 ## Scoring
 
-Collect all 8 flags:
+Collect all 14 flags across 5 exercises:
 
 | Flag | Exercise | Points |
 |---|---|---|
@@ -177,8 +279,14 @@ Collect all 8 flags:
 | `BAC{manual_role_check_bypasses_permission_system}` | 02 | 15 |
 | `BAC{jwt_alg_none_accepted}` | 03 | 20 |
 | `BAC{jwt_weak_secret_cracked}` | 03 | 20 |
+| `BAC{search_no_ownership_filter}` | 04 | 15 |
+| `BAC{bulk_update_no_item_checks}` | 04 | 15 |
+| `BAC{bulk_delete_no_item_checks}` | 04 | 15 |
+| `BAC{cross_org_no_context_validation}` | 05 | 20 |
+| `BAC{org_setup_no_admin_validation}` | 05 | 20 |
+| `BAC{org_invite_no_authorization}` | 05 | 20 |
 | All hardening tests green | All | **+50 bonus** |
-| **Total** | | **150** |
+| **Total** | | **245** |
 
 ---
 
@@ -191,7 +299,7 @@ broken-access-control-lab/
 │   ├── roles.js        # Centralized PERMISSIONS map (source of truth)
 │   ├── middleware.js   # requirePermission + requireOwnership factories
 │   ├── data.js         # In-memory "database": users + expenses
-│   └── app.js          # Express routes                     [Bugs #1-#6]
+│   └── app.js          # Express routes                     [Bugs #1-#6, #9-#12]
 ├── exercises/
 │   ├── 01-idor/
 │   │   ├── challenge.md       # Mission briefing + curl commands
@@ -199,9 +307,16 @@ broken-access-control-lab/
 │   ├── 02-escalation/
 │   │   ├── challenge.md
 │   │   └── escalation.test.js
-│   └── 03-jwt-abuse/
+│   ├── 03-jwt-abuse/
+│   │   ├── challenge.md
+│   │   └── jwt-abuse.test.js
+│   ├── 04-context-bypass/
+│   │   ├── challenge.md
+│   │   └── context-bypass.test.js
+│   └── 05-multitenant/
 │       ├── challenge.md
-│       └── jwt-abuse.test.js
+│       └── multitenant.test.js
+├── WALKTHROUGH.md      # Complete step-by-step guide for all exercises
 ├── package.json
 └── README.md
 ```
@@ -262,6 +377,36 @@ Never write `if (req.user.role === 'admin')` inline. Always go through
 - [PortSwigger – JWT Attacks](https://portswigger.net/web-security/jwt)
 - [OWASP Access Control Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Access_Control_Cheat_Sheet.html)
 - [jwt.io](https://jwt.io) — JWT debugger
+
+---
+
+## Credits & Tools Used
+
+**This lab was created by:** [@appledev](https://github.com/appledev)
+
+### Tools & Technologies
+
+This lab leverages the following open-source tools and technologies:
+
+| Tool | Purpose | Reference |
+|------|---------|-----------|
+| **Node.js / npm** | Runtime & package management | https://nodejs.org |
+| **Express.js** | Web framework | https://expressjs.com |
+| **jsonwebtoken (jwt)** | JWT signing & verification | https://github.com/auth0/node-jsonwebtoken |
+| **bcryptjs** | Password hashing | https://github.com/dcodeIO/bcrypt.js |
+| **Jest** | Test framework | https://jestjs.io |
+| **Supertest** | HTTP assertion library | https://github.com/visionmedia/supertest |
+| **curl** | HTTP client | https://curl.se |
+| **jq** | JSON processor | https://stedolan.github.io/jq |
+| **Bash/Zsh** | Shell scripting | GNU Project |
+
+### Inspired By
+
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [OWASP Juice Shop](https://github.com/juice-shop/juice-shop)
+- [DVWA (Damn Vulnerable Web Application)](http://www.dvwa.co.uk)
+- [HackTheBox](https://www.hackthebox.com)
+- [TryHackMe](https://tryhackme.com)
 
 ---
 
